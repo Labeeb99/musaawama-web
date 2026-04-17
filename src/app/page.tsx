@@ -1,8 +1,15 @@
-import Image from "next/image";
-
-// src/app/page.tsx
 import { Hero } from "@/components/sections/hero";
+import { ServicesPreview } from "@/components/sections/services-preview";
+import { ProjectsPreview } from "@/components/sections/projects-preview";
+import { Cta } from "@/components/sections/cta";
 
 export default function HomePage() {
-  return <Hero />;
+  return (
+    <>
+      <Hero />
+      <ServicesPreview />
+      <ProjectsPreview />
+      <Cta />
+    </>
+  );
 }

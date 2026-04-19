@@ -8,3 +8,4 @@ create table if not exists public.contact_submissions (
   message text not null,
   created_at timestamptz not null default now()
 );
+alter table public.contact_submissions disable row level security;

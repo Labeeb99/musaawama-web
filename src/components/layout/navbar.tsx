@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Container } from "./container";
 
 const navItems = [
-  { href: "/solutions", label: "Solutions" },
+  { href: "/about", label: "About" },
+  { href: "/services", label: "Services" },
   { href: "/projects", label: "Projects" },
-  { href: "/platform", label: "Platform" },
-  { href: "/ai-assistant", label: "AI Assistant" },
+  { href: "/app", label: "Platform" },
+  { href: "/app/assistant", label: "AI" },
   { href: "/contact", label: "Contact" },
 ];
 

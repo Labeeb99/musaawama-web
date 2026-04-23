@@ -140,7 +140,7 @@ export default function AssistantPage() {
 
       const assistantMessage: ChatMessage = {
         role: "assistant",
-        content: data.reply,
+        content: data.reply || "No response returned.",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);

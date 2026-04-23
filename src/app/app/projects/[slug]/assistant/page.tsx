@@ -2,45 +2,36 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { Container } from "@/components/layout/container";
 import { AuthGuard } from "@/components/app/auth-guard";
-import { Breadcrumbs } from "@/components/app/breadcrumbs";
 
-type ChatMessage = {
+type Message = {
   role: "user" | "assistant";
   content: string;
 };
 
-const suggestedQuestions = [
-  "What is the project status?",
-  "What is the latest update?",
-  "What client actions are pending?",
-  "Are there any milestone risks?",
-  "What should be reviewed next?",
+const suggestedPrompts = [
+  "Summarise the current project status",
+  "What are the key risks right now?",
+  "What actions are pending from the client?",
+  "Explain the current phase and next steps",
+  "What milestones are coming up?",
 ];
 
 export default function ProjectAssistantPage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "I’m the project-specific assistant. I can explain project status, latest updates, milestones, client actions, and likely delivery attention points for this workspace.",
-    },
-  ]);
-
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function sendMessage(messageText: string) {
-    const trimmed = messageText.trim();
-    if (!trimmed) return;
+  async function handleSend(messageText?: string) {
+    const text = (messageText ?? input).trim();
+    if (!text) return;
 
-    const userMessage: ChatMessage = {
+    const userMessage: Message = {
       role: "user",
-      content: trimmed,
+      content: text,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -53,18 +44,33 @@ export default function ProjectAssistantPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: text }),
       });
 
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: { reply?: string; error?: string } = {};
 
-      if (!res.ok) {
-        throw new Error(data.error || "Something went wrong.");
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        throw new Error("The assistant returned an invalid response.");
+      }
+ 
+            if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("You must be logged in to use this project assistant.");
+        }
+
+        if (res.status === 403) {
+          throw new Error("You do not have access to this project's assistant.");
+        }
+
+        throw new Error(data.error || `Request failed with status ${res.status}.`);
       }
 
-      const assistantMessage: ChatMessage = {
+      const assistantMessage: Message = {
         role: "assistant",
-        content: data.reply,
+        content: data.reply || "No response.",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -76,7 +82,7 @@ export default function ProjectAssistantPage() {
           content:
             error instanceof Error
               ? error.message
-              : "Something went wrong.",
+              : "Something went wrong. Please try again.",
         },
       ]);
     } finally {
@@ -84,122 +90,89 @@ export default function ProjectAssistantPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    await sendMessage(input);
-  }
-
   return (
     <AuthGuard>
-      <section className="py-20">
-        <Container>
-          <Breadcrumbs
-            items={[
-              { label: "Platform", href: "/app" },
-              { label: "Projects", href: "/app/projects" },
-              { label: slug, href: `/app/projects/${slug}` },
-              { label: "Assistant" },
-            ]}
-          />
+      <div className="space-y-8">
+        <div className="max-w-3xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Project Assistant
+          </p>
 
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              Project Assistant
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              AI workspace for {slug}
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-neutral-600">
-              This assistant uses the selected project context to answer questions about
-              status, updates, milestones, actions, and delivery attention points.
-            </p>
-          </div>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
+            AI support for project understanding and decisions
+          </h1>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            <div className="rounded-2xl border border-neutral-200 p-6 lg:col-span-2">
-              <h2 className="text-xl font-semibold">Project chat</h2>
+          <p className="mt-4 text-base leading-8 text-neutral-600">
+            Ask questions about the project, request summaries, or explore risks,
+            milestones, and actions. This assistant will evolve into a fully
+            project-aware intelligence layer.
+          </p>
+        </div>
 
-              <div className="mt-6 space-y-4">
-                {messages.map((message, index) => (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {suggestedPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              onClick={() => handleSend(prompt)}
+              className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700 transition hover:bg-neutral-100"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <div className="max-h-[400px] space-y-4 overflow-y-auto">
+            {messages.length ? (
+              messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={msg.role === "user" ? "text-right" : "text-left"}
+                >
                   <div
-                    key={`${message.role}-${index}`}
                     className={
-                      message.role === "user"
-                        ? "ml-auto max-w-xl rounded-2xl bg-neutral-100 p-4"
-                        : "max-w-xl rounded-2xl bg-neutral-900 p-4 text-white"
+                      msg.role === "user"
+                        ? "inline-block rounded-2xl bg-neutral-900 px-4 py-3 text-sm text-white"
+                        : "inline-block rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-900"
                     }
                   >
-                    <p
-                      className={
-                        message.role === "user"
-                          ? "text-sm font-medium text-neutral-900"
-                          : "text-sm font-medium"
-                      }
-                    >
-                      {message.role === "user" ? "You" : "Project AI"}
-                    </p>
-                    <p
-                      className={
-                        message.role === "user"
-                          ? "mt-2 text-sm leading-6 text-neutral-700"
-                          : "mt-2 text-sm leading-6 text-neutral-300"
-                      }
-                    >
-                      {message.content}
-                    </p>
+                    {msg.content}
                   </div>
-                ))}
-
-                {loading && (
-                  <div className="max-w-xl rounded-2xl bg-neutral-900 p-4 text-white">
-                    <p className="text-sm font-medium">Project AI</p>
-                    <p className="mt-2 text-sm leading-6 text-neutral-300">
-                      Thinking...
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <form
-                onSubmit={handleSubmit}
-                className="mt-8 rounded-2xl border border-neutral-200 p-4"
-              >
-                <textarea
-                  rows={4}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about the selected project..."
-                  className="w-full resize-none rounded-xl border border-neutral-300 px-4 py-3"
-                />
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="rounded-full bg-neutral-900 px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
-                  >
-                    {loading ? "Sending..." : "Send"}
-                  </button>
                 </div>
-              </form>
-            </div>
+              ))
+            ) : (
+              <p className="text-sm text-neutral-500">
+                No messages yet. Ask about project status, milestones, actions, or documents.
+              </p>
+            )}
 
-            <div className="rounded-2xl border border-neutral-200 p-6">
-              <h2 className="text-xl font-semibold">Suggested questions</h2>
-              <div className="mt-6 space-y-3">
-                {suggestedQuestions.map((question) => (
-                  <button
-                    key={question}
-                    onClick={() => sendMessage(question)}
-                    className="w-full rounded-xl bg-neutral-50 p-4 text-left text-sm leading-6 text-neutral-700 transition hover:bg-neutral-100"
-                  >
-                    {question}
-                  </button>
-                ))}
+            {loading && (
+              <div className="text-left">
+                <div className="inline-block rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-900">
+                  Reviewing project context...
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        </Container>
-      </section>
+
+          <div className="mt-6 flex gap-3">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about status, risks, actions, milestones, or documents..."
+              className="flex-1 rounded-full border border-neutral-300 px-4 py-3 text-sm focus:outline-none"
+            />
+
+            <button
+              onClick={() => handleSend()}
+              disabled={loading}
+              className="rounded-full bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? "Working..." : "Send"}
+            </button>
+          </div>
+        </div>
+      </div>
     </AuthGuard>
   );
 }

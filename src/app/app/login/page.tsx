@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@/lib/supabase-browser";
+import { createBrowserClientSingleton } from "@/lib/supabase-browser";
 import { Container } from "@/components/layout/container";
 
 export default function LoginPage() {
-  const supabase = createBrowserClient();
+  const supabase = createBrowserClientSingleton();
   const router = useRouter();
 
   const [email, setEmail] = useState("");

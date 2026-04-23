@@ -6,7 +6,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     let query = supabase
       .from("assistant_messages")

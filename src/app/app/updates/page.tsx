@@ -1,4 +1,3 @@
-import { Container } from "@/components/layout/container";
 import { AuthGuard } from "@/components/app/auth-guard";
 import { createServerClient } from "@/lib/supabase-server";
 
@@ -11,7 +10,7 @@ type ProjectUpdate = {
 };
 
 export default async function UpdatesPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const { data: updates, error } = await supabase
     .from("project_updates")
@@ -22,72 +21,84 @@ export default async function UpdatesPage() {
     throw new Error(error.message);
   }
 
+  const typedUpdates = (updates ?? []) as ProjectUpdate[];
+
   return (
     <AuthGuard>
-      <section className="py-20">
-        <Container>
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              Project Updates
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              Live delivery update feed
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-neutral-600">
-              This section brings together project updates across the workspace so clients
-              and teams can quickly understand what has changed, what decisions are pending,
-              and what needs attention next.
-            </p>
-          </div>
+      <div className="space-y-10">
+        <div className="max-w-4xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Updates
+          </p>
 
-          <div className="mt-10 space-y-4">
-            {(updates as ProjectUpdate[] | null)?.length ? (
-              (updates as ProjectUpdate[]).map((update) => (
-                <div
-                  key={update.id}
-                  className="rounded-2xl border border-neutral-200 bg-white p-6"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <p className="text-sm text-neutral-500">{update.project_slug}</p>
-                      <h2 className="mt-1 text-xl font-semibold">{update.title}</h2>
-                    </div>
-                    <span className="inline-flex rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
-                      {new Date(update.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
+            Live delivery update feed
+          </h1>
 
-                  <p className="mt-4 text-sm leading-6 text-neutral-600">
-                    {update.description}
-                  </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-neutral-600">
+            Review project activity across the workspace and understand what has changed,
+            what decisions may be pending, and which updates matter most right now.
+          </p>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          {typedUpdates.length ? (
+            typedUpdates.map((update) => (
+              <div
+                key={update.id}
+                className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="inline-flex rounded-full bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-700">
+                    {update.project_slug}
+                  </span>
+
+                  <span className="text-sm text-neutral-500">
+                    {new Date(update.created_at).toLocaleDateString()}
+                  </span>
                 </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-                No updates available yet.
+
+                <h2 className="mt-5 text-2xl font-semibold text-neutral-900">
+                  {update.title}
+                </h2>
+
+                <p className="mt-4 text-base leading-8 text-neutral-600">
+                  {update.description}
+                </p>
               </div>
-            )}
+            ))
+          ) : (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+              No updates available yet.
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+              AI Support
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+              Update interpretation preview
+            </h2>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
-            <h2 className="text-xl font-semibold">AI update support preview</h2>
-            <p className="mt-4 text-sm leading-6 text-neutral-600">
-              The assistant will later help summarize this feed with prompts such as:
-            </p>
-            <div className="mt-6 space-y-3">
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “Summarize the latest updates across all active projects.”
-              </div>
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “Which update suggests the highest delivery risk this week?”
-              </div>
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “What client actions are currently pending across the portfolio?”
-              </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl bg-neutral-50 p-5 text-sm leading-7 text-neutral-700">
+              “Summarise the latest changes across all active projects.”
+            </div>
+
+            <div className="rounded-2xl bg-neutral-50 p-5 text-sm leading-7 text-neutral-700">
+              “Which update suggests the highest delivery risk this week?”
+            </div>
+
+            <div className="rounded-2xl bg-neutral-50 p-5 text-sm leading-7 text-neutral-700">
+              “What client decisions are most likely to affect progress?”
             </div>
           </div>
-        </Container>
-      </section>
+        </div>
+      </div>
     </AuthGuard>
   );
 }

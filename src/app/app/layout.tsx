@@ -1,27 +1,42 @@
 "use client";
 
-import { SessionBar } from "@/components/app/session-bar";
 import Link from "next/link";
 import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Container } from "@/components/layout/container";
+import { SessionBar } from "@/components/app/session-bar";
 
-const appNavItems = [
-  { href: "/app", label: "Overview" },
-  { href: "/app/login", label: "Login" },
-  { href: "/app/dashboard", label: "Dashboard" },
-  { href: "/app/summary", label: "Summary" },
-  { href: "/app/search", label: "Search" },
-  { href: "/app/leads", label: "Leads" },
-  { href: "/app/projects", label: "Projects" },
-  { href: "/app/updates", label: "Updates" },
-  { href: "/app/milestones", label: "Milestones" },
-  { href: "/app/actions", label: "Actions" },
-  { href: "/app/documents", label: "Documents" },
-  { href: "/app/assistant", label: "AI Assistant" },
-  { href: "/app/knowledge", label: "Knowledge" },
-  { href: "/app/assistant-rules", label: "AI Rules" },
-  { href: "/app/settings", label: "Settings" },
+const navGroups = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/app/dashboard", label: "Dashboard" },
+      { href: "/app/summary", label: "Summary" },
+      { href: "/app/search", label: "Search" },
+    ],
+  },
+  {
+    title: "Workflows",
+    items: [
+      { href: "/app/leads", label: "Leads" },
+      { href: "/app/projects", label: "Projects" },
+      { href: "/app/updates", label: "Updates" },
+      { href: "/app/milestones", label: "Milestones" },
+      { href: "/app/actions", label: "Actions" },
+      { href: "/app/documents", label: "Documents" },
+    ],
+  },
+  {
+    title: "Intelligence",
+    items: [
+      { href: "/app/assistant", label: "AI Assistant" },
+      { href: "/app/knowledge", label: "Knowledge" },
+      { href: "/app/assistant-rules", label: "AI Rules" },
+    ],
+  },
+  {
+    title: "Workspace",
+    items: [{ href: "/app/settings", label: "Settings" }],
+  },
 ];
 
 type AppLayoutProps = {
@@ -32,52 +47,77 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
 
   function isActive(href: string) {
-    if (href === "/app") {
-      return pathname === "/app";
-    }
-
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <header className="border-b border-neutral-200 bg-white">
-        <Container className="flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              Musaawama Platform
+      <div className="flex min-h-screen">
+        <aside className="hidden w-72 border-r border-neutral-200 bg-white lg:flex lg:flex-col">
+          <div className="border-b border-neutral-200 px-6 py-6">
+            <Link
+              href="/app/dashboard"
+              className="text-lg font-semibold tracking-tight text-neutral-900"
+            >
+              Musaawama
+            </Link>
+            <p className="mt-2 text-sm text-neutral-500">
+              Project Intelligence Platform
             </p>
-            <h1 className="text-lg font-semibold tracking-tight">
-              Project Intelligence Workspace
-            </h1>
           </div>
 
-          <div className="flex flex-col gap-4 md:items-end">
-            <nav className="flex flex-wrap gap-3">
-              {appNavItems.map((item) => {
-                const active = isActive(item.href);
+          <nav className="flex-1 overflow-y-auto px-4 py-6">
+            <div className="space-y-8">
+              {navGroups.map((group) => (
+                <div key={group.title}>
+                  <p className="px-3 text-xs font-medium uppercase tracking-[0.2em] text-neutral-400">
+                    {group.title}
+                  </p>
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={
-                      active
-                        ? "rounded-full border border-neutral-900 bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
-                        : "rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
-                    }
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-            <SessionBar />
-          </div>
-        </Container>
-      </header>
+                  <div className="mt-3 space-y-2">
+                    {group.items.map((item) => {
+                      const active = isActive(item.href);
 
-      <main>{children}</main>
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={
+                            active
+                              ? "block rounded-xl bg-neutral-900 px-4 py-3 text-sm font-medium text-white"
+                              : "block rounded-xl px-4 py-3 text-sm font-medium text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900"
+                          }
+                        >
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </nav>
+        </aside>
+
+        <div className="flex min-h-screen flex-1 flex-col">
+          <header className="border-b border-neutral-200 bg-white">
+            <div className="flex items-center justify-between px-6 py-4 lg:px-10">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+                  Musaawama Platform
+                </p>
+                <h1 className="text-lg font-semibold tracking-tight text-neutral-900">
+                  Workspace
+                </h1>
+              </div>
+
+              <SessionBar />
+            </div>
+          </header>
+
+          <main className="flex-1 px-6 py-8 lg:px-10">{children}</main>
+        </div>
+      </div>
     </div>
   );
 }

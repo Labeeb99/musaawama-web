@@ -10,7 +10,7 @@ type RouteParams = {
 export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { data, error } = await supabase
       .from("leads")

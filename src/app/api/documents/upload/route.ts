@@ -7,6 +7,9 @@ export async function POST(request: Request) {
 
     const file = formData.get("file") as File | null;
     const projectSlug = formData.get("projectSlug") as string | null;
+    const category = formData.get("category") as string | null;
+    const description = formData.get("description") as string | null;
+    const tags = formData.get("tags") as string | null;
 
     if (!file || !projectSlug) {
       return NextResponse.json(
@@ -15,38 +18,56 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const safeFileName = `${Date.now()}-${file.name}`;
-    const filePath = `${projectSlug}/${safeFileName}`;
+    const filePath = `${projectSlug}/${Date.now()}-${file.name}`;
 
     const { error: uploadError } = await supabase.storage
       .from("project-documents")
-      .upload(filePath, buffer, {
+      .upload(filePath, arrayBuffer, {
         contentType: file.type || "application/octet-stream",
         upsert: false,
       });
 
     if (uploadError) {
+      console.error("UPLOAD STORAGE ERROR:", {
+        filePath,
+        fileName: file.name,
+        projectSlug,
+        error: uploadError,
+      });
+
       return NextResponse.json(
         { error: uploadError.message },
         { status: 500 }
       );
     }
 
-    const { error: insertError } = await supabase.from("documents").insert([
-      {
-        project_slug: projectSlug,
-        file_name: file.name,
-        file_path: filePath,
-        file_type: file.type || "unknown",
-      },
-    ]);
+    const { data: inserted, error: insertError } = await supabase
+      .from("documents")
+      .insert([
+        {
+          project_slug: projectSlug,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type || "unknown",
+          category: category?.trim() || null,
+          description: description?.trim() || null,
+          tags: tags?.trim() || null,
+        },
+      ])
+      .select("id, file_path")
+      .single();
 
     if (insertError) {
+      console.error("UPLOAD DB ERROR:", {
+        filePath,
+        fileName: file.name,
+        projectSlug,
+        error: insertError,
+      });
+
       return NextResponse.json(
         { error: insertError.message },
         { status: 500 }
@@ -55,12 +76,17 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       message: "Document uploaded successfully.",
-      filePath,
+      document: inserted,
     });
-  } catch {
+  } catch (error) {
+    console.error("UPLOAD ROUTE ERROR:", error);
+
     return NextResponse.json(
-      { error: "Invalid upload request." },
-      { status: 400 }
+      {
+        error:
+          error instanceof Error ? error.message : "Invalid upload request.",
+      },
+      { status: 500 }
     );
   }
 }

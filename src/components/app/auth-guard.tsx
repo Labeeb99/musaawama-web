@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@/lib/supabase-browser";
+import { createBrowserClientSingleton } from "@/lib/supabase-browser";
 
 type AuthGuardProps = {
   children: ReactNode;
@@ -10,7 +10,7 @@ type AuthGuardProps = {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
-  const supabase = createBrowserClient();
+  const supabase = createBrowserClientSingleton();
 
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);

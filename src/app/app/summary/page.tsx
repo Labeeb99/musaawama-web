@@ -1,4 +1,3 @@
-import { Container } from "@/components/layout/container";
 import { AuthGuard } from "@/components/app/auth-guard";
 import { createServerClient } from "@/lib/supabase-server";
 
@@ -31,7 +30,7 @@ type ClientAction = {
 };
 
 export default async function SummaryPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const [{ data: projects }, { data: updates }, { data: milestones }, { data: actions }] =
     await Promise.all([
@@ -45,107 +44,154 @@ export default async function SummaryPage() {
         .from("project_milestones")
         .select("id, title, status, project_slug")
         .order("due_date", { ascending: true })
-        .limit(5),
+        .limit(6),
       supabase
         .from("client_actions")
         .select("id, title, status, project_slug")
         .order("due_date", { ascending: true })
-        .limit(5),
+        .limit(6),
     ]);
 
-  const activeProjects =
-    (projects as Project[] | null)?.filter((project) => project.status === "Active") ?? [];
+  const typedProjects = (projects ?? []) as Project[];
+  const typedUpdates = (updates ?? []) as ProjectUpdate[];
+  const typedMilestones = (milestones ?? []) as Milestone[];
+  const typedActions = (actions ?? []) as ClientAction[];
 
-  const pendingMilestones =
-    (milestones as Milestone[] | null)?.filter(
-      (milestone) => milestone.status !== "Completed"
-    ) ?? [];
-
-  const pendingActions =
-    (actions as ClientAction[] | null)?.filter(
-      (action) => action.status !== "Completed"
-    ) ?? [];
+  const activeProjects = typedProjects.filter((project) => project.status === "Active");
+  const pendingMilestones = typedMilestones.filter(
+    (milestone) => milestone.status !== "Completed"
+  );
+  const pendingActions = typedActions.filter((action) => action.status !== "Completed");
 
   return (
     <AuthGuard>
-      <section className="py-20">
-        <Container>
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              AI Portfolio Summary
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              Construction intelligence overview
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-neutral-600">
-              This page represents the portfolio-level intelligence layer of the platform.
-              Over time, the AI assistant will generate real summaries from live project
-              data, documents, actions, milestones, and delivery updates.
+      <div className="space-y-10">
+        <div className="max-w-4xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Summary
+          </p>
+
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
+            Portfolio intelligence overview
+          </h1>
+
+          <p className="mt-4 max-w-3xl text-base leading-8 text-neutral-600">
+            View the current state of the wider workspace across active projects,
+            delivery updates, milestone pressure points, and client actions that
+            may require attention.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <p className="text-sm text-neutral-500">Active Projects</p>
+            <p className="mt-4 text-4xl font-bold tracking-tight text-neutral-900">
+              {activeProjects.length}
             </p>
           </div>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <p className="text-sm text-neutral-500">Active Projects</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">
-                {activeProjects.length}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <p className="text-sm text-neutral-500">Pending Milestones</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">
-                {pendingMilestones.length}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <p className="text-sm text-neutral-500">Pending Client Actions</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">
-                {pendingActions.length}
-              </p>
-            </div>
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <p className="text-sm text-neutral-500">Pending Milestones</p>
+            <p className="mt-4 text-4xl font-bold tracking-tight text-neutral-900">
+              {pendingMilestones.length}
+            </p>
           </div>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <h2 className="text-xl font-semibold">Latest updates</h2>
-              <div className="mt-6 space-y-4">
-                {(updates as ProjectUpdate[] | null)?.map((update) => (
-                  <div key={update.id} className="rounded-xl bg-neutral-50 p-4">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <p className="text-sm text-neutral-500">Pending Client Actions</p>
+            <p className="mt-4 text-4xl font-bold tracking-tight text-neutral-900">
+              {pendingActions.length}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+                Delivery Feed
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+                Latest portfolio updates
+              </h2>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {typedUpdates.length ? (
+                typedUpdates.map((update) => (
+                  <div key={update.id} className="rounded-2xl bg-neutral-50 p-5">
                     <p className="text-sm text-neutral-500">{update.project_slug}</p>
-                    <h3 className="mt-1 font-medium">{update.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-neutral-600">
+                    <h3 className="mt-2 text-lg font-medium text-neutral-900">
+                      {update.title}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 text-neutral-600">
                       {update.description}
                     </p>
                   </div>
-                ))}
+                ))
+              ) : (
+                <div className="rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
+                  No updates available yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+                  Milestones
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+                  Current delivery pressure points
+                </h2>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                {pendingMilestones.length ? (
+                  pendingMilestones.slice(0, 4).map((milestone) => (
+                    <div key={milestone.id} className="rounded-2xl bg-neutral-50 p-5">
+                      <p className="text-sm text-neutral-500">{milestone.project_slug}</p>
+                      <h3 className="mt-2 text-base font-medium text-neutral-900">
+                        {milestone.title}
+                      </h3>
+                      <p className="mt-2 text-sm text-neutral-600">
+                        Status: {milestone.status}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
+                    No pending milestones right now.
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <h2 className="text-xl font-semibold">AI summary preview</h2>
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+                  AI Summary
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+                  Portfolio attention preview
+                </h2>
+              </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="rounded-xl bg-neutral-900 p-4 text-white">
-                  <p className="text-sm font-medium">Example AI summary</p>
-                  <p className="mt-2 text-sm leading-6 text-neutral-300">
-                    Active projects currently show a concentration of pending client
-                    decisions around finishes and coordination. The most immediate focus
-                    should be on approvals that affect sequencing and procurement timing.
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                  In the future, this summary will be generated dynamically by the AI
-                  assistant from real project records, updates, actions, milestones, and
-                  documents.
-                </div>
+              <div className="mt-6 rounded-2xl bg-neutral-900 p-6 text-white">
+                <p className="text-sm font-medium">Example AI summary</p>
+                <p className="mt-3 text-sm leading-7 text-neutral-300">
+                  Active projects currently show a concentration of pending actions and
+                  unresolved milestone items. The main delivery focus should remain on
+                  closing open client decisions before they begin to affect sequencing
+                  and coordination continuity.
+                </p>
               </div>
             </div>
           </div>
-        </Container>
-      </section>
+        </div>
+      </div>
     </AuthGuard>
   );
 }

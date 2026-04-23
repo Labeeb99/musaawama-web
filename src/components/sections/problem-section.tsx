@@ -1,35 +1,53 @@
 import { Container } from "@/components/layout/container";
 
-const problems = [
-  "Project information is often fragmented across emails, calls, drawings, and verbal updates.",
-  "Clients and teams struggle to understand what is happening on site and what decisions matter most.",
-  "Construction advice is often difficult to access early, which leads to delays, confusion, and reactive planning.",
+const problemPoints = [
+  {
+    title: "Fragmented information",
+    description:
+      "Project knowledge is often spread across calls, emails, documents, and site conversations, making it hard to maintain clarity.",
+  },
+  {
+    title: "Delayed decisions",
+    description:
+      "Approvals and client actions can slow delivery when there is no clear visibility into what is pending and why it matters.",
+  },
+  {
+    title: "Reactive project control",
+    description:
+      "Teams often respond to issues after they appear instead of using structured visibility and better systems to identify risks earlier.",
+  },
 ];
 
 export function ProblemSection() {
   return (
-    <section className="bg-neutral-50 py-24">
+    <section className="py-20">
       <Container>
         <div className="max-w-3xl">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-            The Problem
+            Why Musaawama
           </p>
+
           <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-            Construction projects break down when visibility, coordination, and decision-making are disconnected.
+            Construction projects become harder when visibility, decisions, and delivery are disconnected
           </h2>
-          <p className="mt-6 text-lg leading-8 text-neutral-600">
-            Most project problems are not caused by a single issue. They emerge from fragmented systems,
-            delayed decisions, unclear ownership, and weak visibility across the whole project environment.
+
+          <p className="mt-6 text-base leading-8 text-neutral-600">
+            Musaawama is being built to address that gap. By combining practical delivery
+            experience, systems thinking, and AI-assisted workflows, the platform aims to
+            make project information easier to understand and act on.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {problems.map((problem) => (
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          {problemPoints.map((point) => (
             <div
-              key={problem}
-              className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm"
+              key={point.title}
+              className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm hover:shadow-md transition"
             >
-              <p className="text-sm leading-7 text-neutral-600">{problem}</p>
+              <h3 className="text-lg font-medium">{point.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">
+                {point.description}
+              </p>
             </div>
           ))}
         </div>

@@ -1,7 +1,7 @@
-import { Breadcrumbs } from "@/components/app/breadcrumbs";
 import { notFound } from "next/navigation";
-import { Container } from "@/components/layout/container";
 import { AuthGuard } from "@/components/app/auth-guard";
+import { Breadcrumbs } from "@/components/app/breadcrumbs";
+import { Container } from "@/components/layout/container";
 import { createServerClient } from "@/lib/supabase-server";
 
 type PageProps = {
@@ -39,7 +39,7 @@ type ClientAction = {
 
 export default async function ProjectHealthPage({ params }: PageProps) {
   const { slug } = await params;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const [
     { data: project, error: projectError },
@@ -92,7 +92,7 @@ export default async function ProjectHealthPage({ params }: PageProps) {
 
   return (
     <AuthGuard>
-      <section className="py-20">
+      <div className="space-y-10">
         <Container>
           <Breadcrumbs
             items={[
@@ -102,93 +102,142 @@ export default async function ProjectHealthPage({ params }: PageProps) {
               { label: "Health" },
             ]}
           />
-          <div className="max-w-3xl">
+
+          <div className="max-w-4xl">
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
               Project Health
             </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
+
+            <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
               {typedProject.title}
             </h1>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <span className="inline-flex rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <span className="inline-flex rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white">
                 {typedProject.status}
               </span>
-              <span className="inline-flex rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
+
+              <span className="inline-flex rounded-full bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-700">
                 {typedProject.phase}
               </span>
             </div>
-          </div>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+            <p className="mt-6 max-w-3xl text-base leading-8 text-neutral-600">
+              This screen brings together project updates, milestones, and client actions
+              so the current delivery picture can be understood more clearly.
+            </p>
+          </div>
+        </Container>
+
+        <Container>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <p className="text-sm text-neutral-500">Recent Updates</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">
+              <p className="mt-4 text-4xl font-bold tracking-tight text-neutral-900">
                 {typedUpdates.length}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <p className="text-sm text-neutral-500">Pending Milestones</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">
+              <p className="mt-4 text-4xl font-bold tracking-tight text-neutral-900">
                 {pendingMilestones.length}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <p className="text-sm text-neutral-500">Pending Client Actions</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight">
+              <p className="mt-4 text-4xl font-bold tracking-tight text-neutral-900">
                 {pendingActions.length}
               </p>
             </div>
           </div>
+        </Container>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <h2 className="text-xl font-semibold">Latest updates</h2>
+        <Container>
+          <div className="grid gap-6 xl:grid-cols-2">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+                  Updates
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+                  Latest project activity
+                </h2>
+              </div>
+
               <div className="mt-6 space-y-4">
                 {typedUpdates.length ? (
                   typedUpdates.map((update) => (
-                    <div key={update.id} className="rounded-xl bg-neutral-50 p-4">
-                      <h3 className="font-medium">{update.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-neutral-600">
+                    <div key={update.id} className="rounded-2xl bg-neutral-50 p-5">
+                      <h3 className="text-lg font-medium text-neutral-900">
+                        {update.title}
+                      </h3>
+                      <p className="mt-3 text-sm leading-6 text-neutral-600">
                         {update.description}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl bg-neutral-50 p-4 text-sm text-neutral-600">
+                  <div className="rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
                     No updates available yet.
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <h2 className="text-xl font-semibold">Pending actions</h2>
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+                  Actions
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+                  Pending client actions
+                </h2>
+              </div>
+
               <div className="mt-6 space-y-4">
                 {pendingActions.length ? (
                   pendingActions.map((action) => (
-                    <div key={action.id} className="rounded-xl bg-neutral-50 p-4">
-                      <h3 className="font-medium">{action.title}</h3>
+                    <div key={action.id} className="rounded-2xl bg-neutral-50 p-5">
+                      <h3 className="text-base font-medium text-neutral-900">
+                        {action.title}
+                      </h3>
                       <p className="mt-2 text-sm text-neutral-600">
                         Status: {action.status}
+                      </p>
+                      <p className="mt-1 text-sm text-neutral-500">
+                        Due:{" "}
+                        {action.due_date
+                          ? new Date(action.due_date).toLocaleDateString()
+                          : "No due date set"}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl bg-neutral-50 p-4 text-sm text-neutral-600">
+                  <div className="rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
                     No pending actions.
                   </div>
                 )}
               </div>
             </div>
           </div>
+        </Container>
 
-          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
-            <h2 className="text-xl font-semibold">AI health summary preview</h2>
-            <div className="mt-6 rounded-xl bg-neutral-900 p-4 text-white">
+        <Container>
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div>
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+                AI Summary
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+                Delivery attention preview
+              </h2>
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-neutral-900 p-6 text-white">
               <p className="text-sm font-medium">Example AI summary</p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">
+              <p className="mt-3 text-sm leading-7 text-neutral-300">
                 This project currently requires attention on pending client actions and
                 milestone sequencing. The next priority should be resolving open approvals
                 before they affect programme continuity.
@@ -196,7 +245,7 @@ export default async function ProjectHealthPage({ params }: PageProps) {
             </div>
           </div>
         </Container>
-      </section>
+      </div>
     </AuthGuard>
   );
 }

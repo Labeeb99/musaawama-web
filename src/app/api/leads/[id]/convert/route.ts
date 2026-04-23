@@ -7,123 +7,173 @@ type RouteParams = {
   }>;
 };
 
-function slugify(input: string) {
-  return input
+function createSlugFromName(name: string) {
+  return name
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
     .trim()
-    .replace(/\s+/g, "-");
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
 export async function POST(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const supabase = createServerClient();
+    const leadId = Number(id);
+
+    if (Number.isNaN(leadId)) {
+      return NextResponse.json(
+        { error: "Invalid lead id." },
+        { status: 400 }
+      );
+    }
+
+    const supabase = await createServerClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
+
+    const allowedRoles = ["admin", "project_manager"];
+
+    if (!allowedRoles.includes(profile.role)) {
+      return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+    }
 
     const { data: lead, error: leadError } = await supabase
       .from("leads")
-      .select("id, name, stage, budget, timeline, summary")
-      .eq("id", Number(id))
+      .select("id, name, stage, summary, budget, timeline")
+      .eq("id", leadId)
       .single();
 
     if (leadError || !lead) {
+      console.error("CONVERT LEAD ERROR: lead lookup failed", leadError);
       return NextResponse.json({ error: "Lead not found." }, { status: 404 });
     }
 
-    const projectSlug = `${slugify(lead.name)}-${lead.id}`;
-    
-    const { error: projectError } = await supabase.from("projects").insert([
-    {
-        slug: projectSlug,
-        title: lead.name,
-        status: "Active",
-        phase: "Initiation",
-        summary: lead.summary,
-        overview: `Project created from lead conversion. Budget: ${lead.budget || "Not set"}. Timeline: ${lead.timeline || "Not set"}.`,
-        source: "lead_conversion",
-        source_lead_id: lead.id,
-    },
-   ]); 
-    
-    if (projectError) {
-      return NextResponse.json({ error: projectError.message }, { status: 500 });
+    if (lead.stage === "Converted") {
+      const { data: existingProject, error: existingProjectError } = await supabase
+        .from("projects")
+        .select("slug")
+        .eq("source_lead_id", lead.id)
+        .maybeSingle();
+
+      if (existingProjectError) {
+        console.error(
+          "CONVERT LEAD ERROR: existing project lookup failed",
+          existingProjectError
+        );
+      }
+
+      return NextResponse.json({
+        message: "Lead has already been converted.",
+        projectSlug: existingProject?.slug ?? null,
+      });
     }
 
-    const { error: updateLeadError } = await supabase
-      .from("leads")
-      .update({ stage: "Converted" })
-      .eq("id", Number(id));
+    const baseSlug = createSlugFromName(lead.name || `lead-${lead.id}`);
+    const projectSlug = `${baseSlug}-${lead.id}`;
 
-    if (updateLeadError) {
+    const { data: createdProject, error: projectError } = await supabase
+      .from("projects")
+      .insert([
+        {
+          slug: projectSlug,
+          title: lead.name,
+          status: "Active",
+          phase: "Pre-Construction",
+          summary: lead.summary || "Converted from lead.",
+          overview: lead.summary || "Converted from lead.",
+          source: "lead",
+          source_lead_id: lead.id,
+        },
+      ])
+      .select("slug, id")
+      .single();
+
+    if (projectError || !createdProject) {
+      console.error("CONVERT LEAD ERROR: project creation failed", {
+        projectSlug,
+        error: projectError,
+      });
+
       return NextResponse.json(
-        { error: updateLeadError.message },
+        { error: projectError?.message || "Failed to create project." },
         { status: 500 }
       );
     }
 
+    const { error: membershipError } = await supabase
+      .from("project_members")
+      .insert([
+        {
+          project_slug: createdProject.slug,
+          user_id: user.id,
+          role: "owner",
+        },
+      ]);
 
-const { error: updateInsertError } = await supabase
-  .from("project_updates")
-  .insert([
-    {
-      project_slug: projectSlug,
-      title: "Project created from lead",
-      description: `This project was created by converting the lead "${lead.name}" into an active workspace.`,
-    },
-  ]);
+    if (membershipError) {
+      console.error("CONVERT LEAD ERROR: membership insert failed", {
+        projectSlug: createdProject.slug,
+        userId: user.id,
+        error: membershipError,
+      });
 
-if (updateInsertError) {
-  return NextResponse.json(
-    { error: updateInsertError.message },
-    { status: 500 }
-  );
-}
+      return NextResponse.json(
+        {
+          error:
+            membershipError.message ||
+            "Project created, but membership assignment failed.",
+        },
+        { status: 500 }
+      );
+    }
 
-const { error: milestoneError } = await supabase
-  .from("project_milestones")
-  .insert([
-    {
-      project_slug: projectSlug,
-      title: "Initial project review",
-      status: "Pending",
-      due_date: null,
-    },
-  ]);
+    const { error: leadUpdateError } = await supabase
+      .from("leads")
+      .update({ stage: "Converted" })
+      .eq("id", lead.id);
 
-if (milestoneError) {
-  return NextResponse.json(
-    { error: milestoneError.message },
-    { status: 500 }
-  );
-}
+    if (leadUpdateError) {
+      console.error("CONVERT LEAD ERROR: lead update failed", {
+        leadId: lead.id,
+        error: leadUpdateError,
+      });
 
-const { error: actionError } = await supabase
-  .from("client_actions")
-  .insert([
-    {
-      project_slug: projectSlug,
-      title: "Confirm project brief",
-      description: `Client should confirm the initial project brief for "${lead.name}" so the workspace can move into the next stage.`,
-      status: "Pending",
-      due_date: null,
-    },
-  ]);
-
-if (actionError) {
-  return NextResponse.json(
-    { error: actionError.message },
-    { status: 500 }
-  );
-}
+      return NextResponse.json(
+        { error: leadUpdateError.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      message: "Lead converted to project successfully.",
-      projectSlug,
+      message: "Lead converted successfully.",
+      projectSlug: createdProject.slug,
     });
-  } catch {
+  } catch (error) {
+    console.error("CONVERT LEAD ROUTE ERROR:", error);
+
     return NextResponse.json(
-      { error: "Invalid request." },
-      { status: 400 }
+      {
+        error: error instanceof Error ? error.message : "Invalid request.",
+      },
+      { status: 500 }
     );
   }
 }

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Container } from "@/components/layout/container";
 import { AuthGuard } from "@/components/app/auth-guard";
 import { createServerClient } from "@/lib/supabase-server";
 
@@ -39,7 +38,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const { q = "" } = await searchParams;
   const query = q.trim();
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   let projects: Project[] = [];
   let updates: ProjectUpdate[] = [];
@@ -86,143 +85,158 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <AuthGuard>
-      <section className="py-20">
-        <Container>
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              Platform Search
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              Find projects, updates, actions, and leads
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-neutral-600">
-              This search layer will evolve into an AI-assisted navigation tool across the
-              full Musaawama workspace.
-            </p>
+      <div className="space-y-10">
+        <div className="max-w-4xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Search
+          </p>
+
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
+            Find projects, updates, actions, and leads across the workspace
+          </h1>
+
+          <p className="mt-4 max-w-3xl text-base leading-8 text-neutral-600">
+            This search layer helps you move quickly across the platform and will
+            evolve into a more intelligent discovery experience over time.
+          </p>
+        </div>
+
+        <form className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <label
+            htmlFor="q"
+            className="mb-3 block text-sm font-medium text-neutral-700"
+          >
+            Search the workspace
+          </label>
+
+          <div className="flex flex-col gap-3 md:flex-row">
+            <input
+              id="q"
+              name="q"
+              defaultValue={query}
+              placeholder="Try: Aldershot, kitchen, approval, refurbishment..."
+              className="w-full rounded-full border border-neutral-300 px-5 py-3 text-sm focus:outline-none"
+            />
+
+            <button
+              type="submit"
+              className="rounded-full bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
+            >
+              Search
+            </button>
           </div>
+        </form>
 
-          <form className="mt-10 rounded-2xl border border-neutral-200 bg-white p-6">
-            <label htmlFor="q" className="mb-2 block text-sm font-medium text-neutral-700">
-              Search the workspace
-            </label>
-            <div className="flex flex-col gap-3 md:flex-row">
-              <input
-                id="q"
-                name="q"
-                defaultValue={query}
-                placeholder="Try: Aldershot, kitchen, approval, refurbishment..."
-                className="w-full rounded-xl border border-neutral-300 px-4 py-3"
-              />
-              <button
-                type="submit"
-                className="rounded-full bg-neutral-900 px-5 py-3 text-sm font-medium text-white"
-              >
-                Search
-              </button>
-            </div>
-          </form>
-
-          {query && (
-            <div className="mt-10 space-y-8">
-              <div>
-                <h2 className="text-2xl font-semibold">Projects</h2>
-                <div className="mt-4 space-y-4">
-                  {projects.length ? (
-			projects.map((project) => (
-			 <Link
-				key={project.slug}
-				href={`/app/projects/${project.slug}`}
-				className="block rounded-2xl border border-neutral-200 bg-white p-6 transition hover:border-neutral-900"
-			 >
-				<h3 className="text-xl font-semibold">{project.title}</h3>
-				<p className="mt-3 text-sm leading-6 text-neutral-600">{project.summary}</p>
-			 </Link>
-			))
-		) : (
-                  
-                    <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-                      No matching projects.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-semibold">Updates</h2>
-                <div className="mt-4 space-y-4">
-                 {updates.length ? (
-                    updates.map((update) => (
-                     <Link
-                       key={update.id}
-                       href={`/app/projects/${update.project_slug}`}
-                       className="block rounded-2xl border border-neutral-200 bg-white p-6 transition hover:border-neutral-900"
-                      >
-                       <p className="text-sm text-neutral-500">{update.project_slug}</p>
-                       <h3 className="mt-1 text-xl font-semibold">{update.title}</h3>
-                       <p className="mt-3 text-sm leading-6 text-neutral-600">{update.description}</p>
-                      </Link>
-                    ))
-               ) : (                  
-
-                    <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-                      No matching updates.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-semibold">Actions</h2>
-                <div className="mt-4 space-y-4">
-                  {actions.length ? (
-                    actions.map((action) => (
-                     <Link
-                         key={action.id}
-                         href={`/app/projects/${action.project_slug}/health`}
-                         className="block rounded-2xl border border-neutral-200 bg-white p-6 transition hover:border-neutral-900"
-                     >
-                         <p className="text-sm text-neutral-500">{action.project_slug}</p>
-                         <h3 className="mt-1 text-xl font-semibold">{action.title}</h3>
-                         <p className="mt-3 text-sm leading-6 text-neutral-600">{action.description}</p>
-                     </Link>
-                    ))
-                ) : (                  
-
-
-
-                    <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-                      No matching actions.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-2xl font-semibold">Leads</h2>
-                <div className="mt-4 space-y-4">
-                  {leads.length ? (
-			leads.map((lead) => (
-			  <Link
-                            key={lead.id}
-                            href={`/app/leads/${lead.id}`}
-                            className="block rounded-2xl border border-neutral-200 bg-white p-6 transition hover:border-neutral-900"
-                          >
-                            <h3 className="text-xl font-semibold">{lead.name}</h3>
-                            <p className="mt-3 text-sm leading-6 text-neutral-600">{lead.summary}</p>
-                          </Link>
-                       ))
-                  ) : (
-
-                    <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-                      No matching leads.
-                    </div>
-                  )}
-                </div>
+        {query && (
+          <div className="space-y-10">
+            <div>
+              <h2 className="text-2xl font-semibold text-neutral-900">Projects</h2>
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                {projects.length ? (
+                  projects.map((project) => (
+                    <Link
+                      key={project.slug}
+                      href={`/app/projects/${project.slug}`}
+                      className="block rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-neutral-300 hover:shadow-md"
+                    >
+                      <h3 className="text-xl font-semibold text-neutral-900">
+                        {project.title}
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-neutral-600">
+                        {project.summary}
+                      </p>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+                    No matching projects.
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </Container>
-      </section>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-neutral-900">Updates</h2>
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                {updates.length ? (
+                  updates.map((update) => (
+                    <Link
+                      key={update.id}
+                      href={`/app/projects/${update.project_slug}`}
+                      className="block rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-neutral-300 hover:shadow-md"
+                    >
+                      <p className="text-sm text-neutral-500">{update.project_slug}</p>
+                      <h3 className="mt-2 text-xl font-semibold text-neutral-900">
+                        {update.title}
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-neutral-600">
+                        {update.description}
+                      </p>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+                    No matching updates.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-neutral-900">Actions</h2>
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                {actions.length ? (
+                  actions.map((action) => (
+                    <Link
+                      key={action.id}
+                      href={`/app/projects/${action.project_slug}/health`}
+                      className="block rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-neutral-300 hover:shadow-md"
+                    >
+                      <p className="text-sm text-neutral-500">{action.project_slug}</p>
+                      <h3 className="mt-2 text-xl font-semibold text-neutral-900">
+                        {action.title}
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-neutral-600">
+                        {action.description}
+                      </p>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+                    No matching actions.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-neutral-900">Leads</h2>
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                {leads.length ? (
+                  leads.map((lead) => (
+                    <Link
+                      key={lead.id}
+                      href={`/app/leads/${lead.id}`}
+                      className="block rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-neutral-300 hover:shadow-md"
+                    >
+                      <h3 className="text-xl font-semibold text-neutral-900">
+                        {lead.name}
+                      </h3>
+                      <p className="mt-3 text-sm leading-7 text-neutral-600">
+                        {lead.summary}
+                      </p>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+                    No matching leads.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </AuthGuard>
   );
 }

@@ -1,4 +1,3 @@
-import { Container } from "@/components/layout/container";
 import { AuthGuard } from "@/components/app/auth-guard";
 import { createServerClient } from "@/lib/supabase-server";
 
@@ -12,7 +11,7 @@ type ClientAction = {
 };
 
 export default async function ActionsPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const { data: actions, error } = await supabase
     .from("client_actions")
@@ -23,76 +22,91 @@ export default async function ActionsPage() {
     throw new Error(error.message);
   }
 
+  const typedActions = (actions ?? []) as ClientAction[];
+
   return (
     <AuthGuard>
-      <section className="py-20">
-        <Container>
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              Client Actions
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              Pending approvals and actions
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-neutral-600">
-              This section highlights what clients need to review, approve, or confirm
-              so the project can continue moving without unnecessary delay.
-            </p>
-          </div>
+      <div className="space-y-10">
+        <div className="max-w-4xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Actions
+          </p>
 
-          <div className="mt-10 space-y-4">
-            {(actions as ClientAction[] | null)?.length ? (
-              (actions as ClientAction[]).map((action) => (
-                <div
-                  key={action.id}
-                  className="rounded-2xl border border-neutral-200 bg-white p-6"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <p className="text-sm text-neutral-500">{action.project_slug}</p>
-                      <h2 className="mt-1 text-xl font-semibold">{action.title}</h2>
-                    </div>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
+            Pending approvals and client action view
+          </h1>
 
-                    <span className="inline-flex rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
-                      {action.status}
-                    </span>
-                  </div>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-neutral-600">
+            Track open decisions, understand what is waiting on client input,
+            and identify which actions are most likely to affect progress.
+          </p>
+        </div>
 
-                  <p className="mt-4 text-sm leading-6 text-neutral-600">
-                    {action.description}
-                  </p>
+        <div className="grid gap-6 xl:grid-cols-2">
+          {typedActions.length ? (
+            typedActions.map((action) => (
+              <div
+                key={action.id}
+                className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="inline-flex rounded-full bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-700">
+                    {action.project_slug}
+                  </span>
 
-                  <p className="mt-4 text-sm text-neutral-500">
-                    Due:{" "}
-                    {action.due_date
-                      ? new Date(action.due_date).toLocaleDateString()
-                      : "No due date set"}
-                  </p>
+                  <span className="inline-flex rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white">
+                    {action.status}
+                  </span>
                 </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-                No client actions available yet.
+
+                <h2 className="mt-5 text-2xl font-semibold text-neutral-900">
+                  {action.title}
+                </h2>
+
+                <p className="mt-4 text-base leading-8 text-neutral-600">
+                  {action.description}
+                </p>
+
+                <p className="mt-4 text-sm text-neutral-500">
+                  Due:{" "}
+                  {action.due_date
+                    ? new Date(action.due_date).toLocaleDateString()
+                    : "No due date set"}
+                </p>
               </div>
-            )}
+            ))
+          ) : (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+              No client actions available yet.
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+              AI Support
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-neutral-900">
+              Action interpretation preview
+            </h2>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
-            <h2 className="text-xl font-semibold">AI action support preview</h2>
-            <div className="mt-6 space-y-3">
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “What approvals are currently blocking progress?”
-              </div>
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “Which client action is most urgent this week?”
-              </div>
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “Show me all pending approvals for Aldershot.”
-              </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl bg-neutral-50 p-5 text-sm leading-7 text-neutral-700">
+              “What approvals are currently blocking progress?”
+            </div>
+
+            <div className="rounded-2xl bg-neutral-50 p-5 text-sm leading-7 text-neutral-700">
+              “Which client action is most urgent this week?”
+            </div>
+
+            <div className="rounded-2xl bg-neutral-50 p-5 text-sm leading-7 text-neutral-700">
+              “Show me all pending approvals for Aldershot.”
             </div>
           </div>
-        </Container>
-      </section>
+        </div>
+      </div>
     </AuthGuard>
   );
 }

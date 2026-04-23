@@ -38,7 +38,10 @@ export default function LeadDetailPage() {
         }
 
         setLead(data.lead);
-      } catch {
+      } catch (error) {
+        setMessage(
+          error instanceof Error ? error.message : "Failed to load lead."
+        );
         router.replace("/app/leads");
       } finally {
         setLoading(false);
@@ -110,11 +113,15 @@ export default function LeadDetailPage() {
     }
   }
 
-  if (loading) {
+    if (loading) {
     return (
       <AuthGuard>
         <section className="py-20">
-          <Container>Loading lead...</Container>
+          <Container>
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600 shadow-sm">
+              Loading lead details...
+            </div>
+          </Container>
         </section>
       </AuthGuard>
     );
@@ -135,88 +142,77 @@ export default function LeadDetailPage() {
               { label: lead.name },
             ]}
           />
-          <div className="max-w-3xl">
+
+          <div className="mt-8 max-w-3xl">
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
               Lead Detail
             </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
+
+            <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
               {lead.name}
             </h1>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <span className="inline-flex rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <span className="inline-flex rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white">
                 {lead.stage}
               </span>
-            </div>
 
-            <p className="mt-6 text-lg leading-8 text-neutral-600">
-              {lead.summary}
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6 lg:col-span-2">
-              <h2 className="text-xl font-semibold">Lead information</h2>
-
-              <div className="mt-6 space-y-4">
-                <div className="rounded-xl bg-neutral-50 p-4">
-                  <p className="text-sm text-neutral-500">Budget</p>
-                  <p className="mt-2 font-medium text-neutral-900">
-                    {lead.budget || "Not set"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-neutral-50 p-4">
-                  <p className="text-sm text-neutral-500">Timeline</p>
-                  <p className="mt-2 font-medium text-neutral-900">
-                    {lead.timeline || "Not set"}
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-neutral-50 p-4">
-                  <p className="text-sm text-neutral-500">Received</p>
-                  <p className="mt-2 font-medium text-neutral-900">
-                    {new Date(lead.created_at).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-              <h2 className="text-xl font-semibold">Next workflow</h2>
-              <div className="mt-6 space-y-3">
-                <button
-                  onClick={convertLead}
-                  disabled={convertLoading}
-                  className="w-full rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
-                >
-                  {convertLoading ? "Converting..." : "Convert to project"}
-                </button>
-
-                <button
-                  onClick={() => updateStatus("In Review")}
-                  disabled={statusLoading || convertLoading}
-                  className="w-full rounded-full border border-neutral-300 px-4 py-3 text-sm font-medium text-neutral-700 disabled:opacity-60"
-                >
-                  Mark in review
-                </button>
-
-                <button
-                  onClick={() => updateStatus("Needs More Detail")}
-                  disabled={statusLoading || convertLoading}
-                  className="w-full rounded-full border border-neutral-300 px-4 py-3 text-sm font-medium text-neutral-700 disabled:opacity-60"
-                >
-                  Request more details
-                </button>
-              </div>
-
-              {message && (
-                <p className="mt-4 text-sm text-neutral-600">{message}</p>
+              {lead.budget && (
+                <span className="inline-flex rounded-full bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-700">
+                  Budget: {lead.budget}
+                </span>
               )}
 
-              <div className="mt-6 rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                This lead can now be converted into a managed project workspace inside
-                the platform.
+              {lead.timeline && (
+                <span className="inline-flex rounded-full bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-700">
+                  Timeline: {lead.timeline}
+                </span>
+              )}
+            </div>
+
+            <p className="mt-6 text-base leading-8 text-neutral-600">
+              {lead.summary}
+            </p>
+
+            <p className="mt-4 text-sm text-neutral-500">
+              Received: {new Date(lead.created_at).toLocaleString()}
+            </p>
+
+                        {message && (
+              <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+                {message}
               </div>
+            )}
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                onClick={() => updateStatus("Qualified")}
+                disabled={statusLoading || convertLoading}
+                className="rounded-full border border-neutral-300 px-5 py-3 text-sm font-medium text-neutral-900 transition hover:border-neutral-900 disabled:opacity-50"
+              >
+                {statusLoading ? "Updating..." : "Mark Qualified"}
+              </button>
+
+              <button
+                onClick={() => updateStatus("Reviewing")}
+                disabled={statusLoading || convertLoading}
+                className="rounded-full border border-neutral-300 px-5 py-3 text-sm font-medium text-neutral-900 transition hover:border-neutral-900 disabled:opacity-50"
+              >
+                {statusLoading ? "Updating..." : "Mark Reviewing"}
+              </button>
+
+              <button
+                onClick={convertLead}
+                disabled={convertLoading || statusLoading || lead.stage === "Converted"}
+                className="rounded-full bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+              >
+                
+                {convertLoading
+                  ? "Converting lead..."
+                  : lead.stage === "Converted"
+                  ? "Project already created"
+                  : "Convert lead to project"}
+              </button>
             </div>
           </div>
         </Container>

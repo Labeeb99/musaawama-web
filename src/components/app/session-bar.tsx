@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@/lib/supabase-browser";
+import { createBrowserClientSingleton } from "@/lib/supabase-browser";
 
 export function SessionBar() {
-  const supabase = createBrowserClient();
+  const supabase = createBrowserClientSingleton();
   const router = useRouter();
 
   const [email, setEmail] = useState<string | null>(null);

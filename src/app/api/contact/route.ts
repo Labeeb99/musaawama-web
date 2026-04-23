@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
 
     const { error: submissionError } = await supabase
       .from("contact_submissions")

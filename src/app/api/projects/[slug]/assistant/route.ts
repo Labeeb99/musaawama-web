@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase-server";
+import { generateAssistantReply } from "@/lib/ai";
 
 type RouteParams = {
   params: Promise<{
@@ -11,72 +12,81 @@ type AssistantRequest = {
   message?: string;
 };
 
-function buildProjectAwareReply(
-  message: string,
-  projectTitle: string,
-  phase: string,
-  status: string,
-  updates: { title: string; description: string }[],
-  milestones: { title: string; status: string }[],
-  actions: { title: string; status: string }[]
-) {
-  const lower = message.toLowerCase();
+function buildProjectContext(input: {
+  project: { title: string; phase: string; status: string };
+  updates: { title: string; description: string }[];
+  milestones: { title: string; status: string }[];
+  actions: { title: string; status: string }[];
+  documents: {
+    file_name: string;
+    file_type: string | null;
+    category: string | null;
+    tags: string | null;
+    description: string | null;
+    created_at: string;
+  }[];
+}) {
+  const updatesText =
+    input.updates.length > 0
+      ? input.updates
+          .map(
+            (item, index) =>
+              `${index + 1}. ${item.title}: ${item.description}`
+          )
+          .join("\n")
+      : "No recent updates recorded.";
 
-  if (lower.includes("status") || lower.includes("phase")) {
-    return `The current project is "${projectTitle}". Its status is "${status}" and the current phase is "${phase}".`;
-  }
+  const milestonesText =
+    input.milestones.length > 0
+      ? input.milestones
+          .map(
+            (item, index) => `${index + 1}. ${item.title} (${item.status})`
+          )
+          .join("\n")
+      : "No milestones recorded.";
 
-  if (lower.includes("update") || lower.includes("latest")) {
-    if (!updates.length) {
-      return `There are no recent updates recorded for "${projectTitle}" yet.`;
-    }
+  const actionsText =
+    input.actions.length > 0
+      ? input.actions
+          .map(
+            (item, index) => `${index + 1}. ${item.title} (${item.status})`
+          )
+          .join("\n")
+      : "No client actions recorded.";
 
-    const latest = updates[0];
-    return `The latest recorded update for "${projectTitle}" is "${latest.title}". ${latest.description}`;
-  }
+  const documentsText =
+    input.documents.length > 0
+      ? input.documents
+          .map(
+            (item, index) =>
+              `${index + 1}. ${item.file_name} — type: ${
+                item.file_type || "Unknown"
+              }, category: ${item.category || "Unspecified"}, tags: ${
+                item.tags || "None"
+              }, description: ${item.description || "No description"}, uploaded: ${new Date(
+                item.created_at
+              ).toLocaleString()}`
+          )
+          .join("\n")
+      : "No project documents recorded.";
 
-  if (lower.includes("milestone")) {
-    if (!milestones.length) {
-      return `There are no milestones recorded for "${projectTitle}" yet.`;
-    }
+  return `
+Project title: ${input.project.title}
+Project status: ${input.project.status}
+Project phase: ${input.project.phase}
 
-    const pending = milestones.filter((item) => item.status !== "Completed");
+Recent updates:
+${updatesText}
 
-    if (!pending.length) {
-      return `All recorded milestones for "${projectTitle}" are currently completed.`;
-    }
+Milestones:
+${milestonesText}
 
-    return `There are ${pending.length} milestone(s) still in progress or pending for "${projectTitle}". The next key items include: ${pending
-      .slice(0, 3)
-      .map((item) => `${item.title} (${item.status})`)
-      .join(", ")}.`;
-  }
+Client actions:
+${actionsText}
 
-  if (lower.includes("action") || lower.includes("approval")) {
-    if (!actions.length) {
-      return `There are no client actions recorded for "${projectTitle}" yet.`;
-    }
-
-    const pending = actions.filter((item) => item.status !== "Completed");
-
-    if (!pending.length) {
-      return `There are no pending client actions for "${projectTitle}" right now.`;
-    }
-
-    return `There are ${pending.length} pending client action(s) for "${projectTitle}". The most relevant include: ${pending
-      .slice(0, 3)
-      .map((item) => `${item.title} (${item.status})`)
-      .join(", ")}.`;
-  }
-
-  if (lower.includes("risk") || lower.includes("delay")) {
-    const pendingMilestones = milestones.filter((item) => item.status !== "Completed").length;
-    const pendingActions = actions.filter((item) => item.status !== "Completed").length;
-
-    return `For "${projectTitle}", the main delivery attention areas appear to be unresolved milestones and client actions. There are ${pendingMilestones} non-completed milestone(s) and ${pendingActions} non-completed client action(s), which may affect sequencing and progress if not addressed.`;
-  }
-
-  return `This is the project assistant for "${projectTitle}". I can help explain the project status, current phase, latest updates, milestones, client actions, and likely delivery attention points. Ask me something more specific and I will summarize it clearly.`;
+Project documents:
+${documentsText}
+`.trim();
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
@@ -92,13 +102,40 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized." },
+        { status: 401 }
+      );
+    }
+
+    const { data: membership, error: membershipError } = await supabase
+      .from("project_members")
+      .select("id, role")
+      .eq("project_slug", slug)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (membershipError || !membership) {
+      return NextResponse.json(
+        { error: "Forbidden." },
+        { status: 403 }
+      );
+    }
 
     const [
       { data: project, error: projectError },
       { data: updates, error: updatesError },
       { data: milestones, error: milestonesError },
       { data: actions, error: actionsError },
+      { data: documents, error: documentsError },
     ] = await Promise.all([
       supabase
         .from("projects")
@@ -123,6 +160,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         .eq("project_slug", slug)
         .order("created_at", { ascending: false })
         .limit(10),
+      supabase
+        .from("documents")
+        .select("file_name, file_type, category, tags, description, created_at")
+        .eq("project_slug", slug)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
 
     if (projectError || !project) {
@@ -132,27 +175,70 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    if (updatesError || milestonesError || actionsError) {
-      return NextResponse.json(
-        { error: "Failed to load project context." },
-        { status: 500 }
-      );
-    }
+    const projectContext =
+      updatesError || milestonesError || actionsError || documentsError
+        ? `
+Project title: ${project.title}
+Project status: ${project.status}
+Project phase: ${project.phase}
 
-    const reply = buildProjectAwareReply(
-      message,
-      project.title,
-      project.phase,
-      project.status,
-      updates ?? [],
-      milestones ?? [],
-      actions ?? []
-    );
+Recent updates:
+Project update context is currently unavailable.
+
+Milestones:
+Milestone context is currently unavailable.
+
+Client actions:
+Client action context is currently unavailable.
+
+Project documents:
+Document context is currently unavailable.
+`.trim()
+        : buildProjectContext({
+            project,
+            updates: updates ?? [],
+            milestones: milestones ?? [],
+            actions: actions ?? [],
+            documents: documents ?? [],
+          });
+
+    const systemPrompt = `
+You are the Musaawama Project Assistant.
+
+You help users understand a specific construction project using only the provided project context.
+
+Rules:
+- Stay grounded in the provided project context.
+- Do not invent updates, milestones, actions, dates, risks, or documents.
+- If something is not in the context, say that it is not currently recorded.
+- If project context is incomplete or unavailable, clearly say which parts are not currently recorded.
+- If project document metadata is provided, use it to answer questions about what files exist, what type they are, and how they are described.
+- Be practical, concise, and structured.
+- When useful, summarize current status, likely attention points, pending actions, next steps, and document coverage.
+- If the user asks about risk or delay, infer cautiously from pending milestones and client actions, and clearly signal that it is an interpretation based on the current data.
+- Do not provide legal, contractual, or exact cost advice unless clearly supported by the project context.
+- Focus on delivery understanding, project visibility, sequencing, and client decision points.
+
+Project context:
+${projectContext}
+`.trim();
+
+    const aiResult = await generateAssistantReply({
+      systemPrompt,
+      userMessage: message,
+    });
+
+    const reply = aiResult.ok
+      ? aiResult.reply
+      : "I could not interpret this project reliably just now. Please try again, or ask a narrower question about project status, updates, milestones, actions, documents, or next steps.";
 
     return NextResponse.json({ reply });
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { error: "Invalid request." },
+      {
+        error:
+          error instanceof Error ? error.message : "Invalid request.",
+      },
       { status: 400 }
     );
   }

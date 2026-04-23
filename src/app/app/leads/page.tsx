@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Container } from "@/components/layout/container";
 import { AuthGuard } from "@/components/app/auth-guard";
 import { createServerClient } from "@/lib/supabase-server";
+import { notFound } from "next/navigation";
 
 type Lead = {
   id: number;
@@ -14,7 +14,32 @@ type Lead = {
 };
 
 export default async function LeadsPage() {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    notFound();
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("user_profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    notFound();
+  }
+
+  const allowedRoles = ["admin", "project_manager"];
+
+  if (!allowedRoles.includes(profile.role)) {
+    notFound();
+  }
 
   const { data: leads, error } = await supabase
     .from("leads")
@@ -25,96 +50,84 @@ export default async function LeadsPage() {
     throw new Error(error.message);
   }
 
+  const typedLeads = (leads ?? []) as Lead[];
+
   return (
     <AuthGuard>
-      <section className="py-20">
-        <Container>
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              Lead Intake
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight">
-              Qualified enquiry workspace
-            </h1>
-            <p className="mt-4 text-lg leading-8 text-neutral-600">
-              This section now acts as the first internal bridge between public website
-              enquiries and managed project opportunities.
-            </p>
-          </div>
+      <div className="space-y-10">
+        <div className="max-w-4xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Leads
+          </p>
 
-          <div className="mt-10 space-y-4">
-            {(leads as Lead[] | null)?.length ? (
-              (leads as Lead[]).map((lead) => (
-                <Link
-                  key={lead.id}
-                  href={`/app/leads/${lead.id}`}
-                  className="block rounded-2xl border border-neutral-200 bg-white p-6 transition hover:border-neutral-900"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <h2 className="text-xl font-semibold">{lead.name}</h2>
-                      <p className="mt-2 text-sm text-neutral-500">
-                        Budget: {lead.budget || "Not set"} • Timeline:{" "}
-                        {lead.timeline || "Not set"}
-                      </p>
-                    </div>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-neutral-900">
+            Qualified enquiries and intake workflow
+          </h1>
 
-                    <span className="inline-flex rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-700">
-                      {lead.stage}
-                    </span>
-                  </div>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-neutral-600">
+            Review incoming enquiries, understand delivery context, update lead status,
+            and convert strong opportunities into project workspaces.
+          </p>
+        </div>
 
-                  {lead.created_at && (
-                    <p className="mt-4 text-sm text-neutral-500">
-                      Received: {new Date(lead.created_at).toLocaleString()}
-                    </p>
-                  )}
+        <div className="grid gap-6 xl:grid-cols-2">
+          {typedLeads.length ? (
+            typedLeads.map((lead) => (
+              <div
+                key={lead.id}
+                className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-flex rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white">
+                    {lead.stage}
+                  </span>
+                </div>
 
-                  <div className="mt-4 rounded-xl bg-neutral-50 p-4">
-                    <p className="text-sm leading-6 text-neutral-700">
-                      {lead.summary}
-                    </p>
-                  </div>
+                <h2 className="mt-5 text-2xl font-semibold text-neutral-900">
+                  {lead.name}
+                </h2>
 
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      className="rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
-                    >
-                      Convert to project
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700"
-                    >
-                      Mark in review
-                    </button>
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
-                No leads available yet.
+                <div className="mt-4 flex flex-wrap gap-4 text-sm text-neutral-500">
+                  <span>Budget: {lead.budget || "Not set"}</span>
+                  <span>Timeline: {lead.timeline || "Not set"}</span>
+                </div>
+
+                {lead.created_at && (
+                  <p className="mt-3 text-sm text-neutral-500">
+                    Received: {new Date(lead.created_at).toLocaleString()}
+                  </p>
+                )}
+
+                <div className="mt-5 rounded-2xl bg-neutral-50 p-5">
+                  <p className="text-sm leading-7 text-neutral-700">
+                    {lead.summary}
+                  </p>
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Link
+                    href={`/app/leads/${lead.id}`}
+                    className="rounded-full bg-neutral-900 px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
+                  >
+                    Open lead
+                  </Link>
+
+                  <Link
+                    href={`/app/leads/${lead.id}`}
+                    className="rounded-full border border-neutral-300 px-5 py-3 text-sm font-medium text-neutral-900 transition hover:border-neutral-900"
+                  >
+                    Review workflow
+                  </Link>
+                </div>
               </div>
-            )}
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6">
-            <h2 className="text-xl font-semibold">AI lead qualification preview</h2>
-            <div className="mt-6 space-y-3">
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “What is the client actually asking for?”
-              </div>
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “What budget and delivery assumptions are visible from this enquiry?”
-              </div>
-              <div className="rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
-                “Should this be converted into a managed project opportunity?”
-              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+              No leads available yet.
             </div>
-          </div>
-        </Container>
-      </section>
+          )}
+        </div>
+      </div>
     </AuthGuard>
   );
 }

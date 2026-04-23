@@ -6,11 +6,11 @@ export function Hero() {
     <section className="relative overflow-hidden py-24 sm:py-32">
       <Container>
         <div className="max-w-5xl">
-          <p className="mb-5 text-sm font-medium uppercase tracking-[0.25em] text-neutral-500">
+          <p className="text-sm font-medium uppercase tracking-[0.25em] text-neutral-500">
             Construction Intelligence • Systems Thinking • AI-Guided Delivery
           </p>
 
-          <h1 className="max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-7xl">
+          <h1 className="mt-5 max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-7xl">
             Building a smarter way to manage construction projects, decisions, and delivery.
           </h1>
 
@@ -30,7 +30,7 @@ export function Hero() {
 
             <Link
               href="/ai-assistant"
-              className="rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-800 transition hover:border-neutral-900"
+              className="rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-900 transition hover:border-neutral-900"
             >
               Explore AI Assistant
             </Link>

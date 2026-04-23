@@ -70,7 +70,7 @@ export default function ProjectAssistantPage() {
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.reply || "No response.",
+        content: data.reply || "No response returned."
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
